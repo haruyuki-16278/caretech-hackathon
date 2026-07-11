@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 環境変数(APIキーはコミットしない)
+.env
+
+# ローカルDB
+backend/posts.sqlite3

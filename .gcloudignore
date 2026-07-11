@@ -1,0 +1,11 @@
+.git
+.gitignore
+.venv/
+backend/.venv/
+backend/.env
+backend/posts.sqlite3
+__pycache__/
+*.pyc
+.devcontainer/
+.claude/
+docs/
