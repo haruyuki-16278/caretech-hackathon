@@ -2,6 +2,7 @@
 from typing import Dict, List
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from . import config, consult, posts
@@ -10,6 +11,15 @@ from .schemas import ChatRequest, ChatResponse, Comment, CommentRequest, Post
 
 app = FastAPI(title="caretech-hackathon API")
 llm = build_llm()
+
+# 担当A(録音・文字起こし)が別オリジンのフロントからAPIを呼べるよう許可する。
+# ハッカソン用途のため全オリジンを許可(本番運用時は許可元を絞ること)。
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.middleware("http")
