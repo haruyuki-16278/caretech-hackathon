@@ -14,6 +14,26 @@ pip install -r requirements.txt
 Azure OpenAI を使う場合は `.env.example` を `.env` にコピーしてキーを設定する。
 **未設定でもモックLLMで全機能が動く**(分類はキーワードベース)。
 
+### 投稿DB
+
+- 既定: ローカル SQLite(`backend/posts.sqlite3`)
+- チーム共有: Firestore。`.env` の `FIREBASE_CREDENTIALS_PATH` にサービスアカウント
+  キーJSONの絶対パスを設定すると自動で切り替わる(キーJSONはリポジトリ外に置くこと)
+
+## テスト
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest tests/
+```
+
+## Codespaces でみんなで試す
+
+1. GitHub の Code ▸ Codespaces ▸ Create codespace on tano_develop
+2. ターミナルで `cd backend && cp .env.example .env`(必要ならキーを設定)
+3. `cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000` で起動
+4. ポート8000が自動転送される。PORTS タブで Visibility を **Public** にすると共有URLで誰でも試せる
+
 ## 起動
 
 ```bash
