@@ -1,0 +1,169 @@
+/* 高齢者向け 音声チャットページ用スタイル
+   大きな文字・大きなボタン・高コントラストを重視する */
+
+:root {
+  --color-bg: #fdfaf3;
+  --color-primary: #1a5276;
+  --color-primary-dark: #0e3a55;
+  --color-accent: #c0392b;
+  --color-text: #222222;
+  --color-card: #ffffff;
+  --color-border: #d8d0bd;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  font-size: 20px;
+  line-height: 1.7;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+h1 {
+  font-size: 32px;
+  text-align: center;
+  color: var(--color-primary-dark);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 20px;
+  margin-bottom: 24px;
+  color: #555;
+}
+
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.status {
+  font-size: 26px;
+  text-align: center;
+  min-height: 2.4em;
+  margin-bottom: 16px;
+  font-weight: bold;
+  color: var(--color-primary-dark);
+}
+
+.record-button {
+  display: block;
+  width: 100%;
+  padding: 32px 16px;
+  font-size: 30px;
+  font-weight: bold;
+  border: none;
+  border-radius: 20px;
+  background-color: var(--color-primary);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.record-button:hover,
+.record-button:focus {
+  background-color: var(--color-primary-dark);
+}
+
+.record-button[aria-pressed="true"] {
+  background-color: var(--color-accent);
+}
+
+.record-button:disabled {
+  background-color: #999;
+  cursor: not-allowed;
+}
+
+.transcript-block,
+.reply-block {
+  margin-top: 20px;
+}
+
+.label {
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.transcript-text,
+.reply-text {
+  font-size: 26px;
+  background: #f6f3ea;
+  border-radius: 12px;
+  padding: 16px;
+  white-space: pre-wrap;
+  min-height: 1.5em;
+}
+
+.consult-info {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #fdecea;
+  border: 2px solid var(--color-accent);
+  font-size: 22px;
+}
+
+.consult-info h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: var(--color-accent);
+}
+
+.text-fallback {
+  margin-top: 8px;
+}
+
+.text-fallback textarea {
+  width: 100%;
+  font-size: 22px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  resize: vertical;
+}
+
+.text-fallback button {
+  margin-top: 12px;
+  width: 100%;
+  padding: 18px;
+  font-size: 22px;
+  border: none;
+  border-radius: 12px;
+  background-color: var(--color-primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+.text-fallback button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.hint {
+  font-size: 16px;
+  color: #777;
+  text-align: center;
+  margin-top: 8px;
+}
+
+audio {
+  width: 100%;
+  margin-top: 12px;
+}

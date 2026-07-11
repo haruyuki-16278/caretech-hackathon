@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>おしゃべりチャット</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <main class="page">
+    <h1>おしゃべりチャット</h1>
+    <p class="subtitle">ボタンを押して、お気軽にお話しください</p>
+
+    <section class="card" aria-label="音声対話">
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+
+      <button id="record-button" class="record-button" type="button" aria-pressed="false">
+        🎙️ 話しかける
+      </button>
+
+      <div class="text-fallback">
+        <label class="label" for="area-input">お住まいの地域(任意・例: 丸岡 / 坂井市)</label>
+        <input id="area-input" type="text" name="area"
+               style="width:100%; font-size:20px; padding:10px; border-radius:10px; border:1px solid #d8d0bd;" />
+      </div>
+
+      <div class="transcript-block">
+        <div class="label">あなたのお話</div>
+        <div id="transcript-text" class="transcript-text"></div>
+      </div>
+
+      <div class="reply-block">
+        <div class="label">お返事</div>
+        <div id="reply-text" class="reply-text"></div>
+        <audio id="reply-audio" hidden controls></audio>
+      </div>
+
+      <div id="consult-info" class="consult-info" hidden>
+        <h2>相談窓口のご案内</h2>
+        <p id="consult-office"></p>
+        <p>電話: <span id="consult-phone"></span></p>
+        <p id="consult-address"></p>
+      </div>
+    </section>
+
+    <section class="card" aria-label="文字での入力">
+      <div class="label">声の代わりに文字で話す</div>
+      <form id="text-fallback-form" class="text-fallback">
+        <textarea id="text-input" rows="3" placeholder="ここに文字を入力してください"></textarea>
+        <button type="submit">送信する</button>
+      </form>
+      <p class="hint">マイクが使えない場合は、こちらから文字でお話しいただけます。</p>
+    </section>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

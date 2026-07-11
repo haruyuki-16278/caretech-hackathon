@@ -1,0 +1,9 @@
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29,<1.0
+python-multipart>=0.0.9
+httpx>=0.27
+jinja2>=3.1
+pydantic>=2.6
+
+# 開発・テスト用
+pytest>=8.0
