@@ -38,6 +38,34 @@
   .post .name::before { content: "👴 "; }
   .post .body { line-height: 1.8; font-size: 1.05rem; }
   .empty { text-align: center; color: #c9c0ae; padding: 3rem 0; line-height: 2; }
+  .actions { display: flex; align-items: center; gap: 0.8rem; margin-top: 0.9rem; }
+  .like-btn {
+    border: 2px solid #d8cdb9; background: #fff; color: var(--color-ink);
+    border-radius: 999px; padding: 0.35rem 0.95rem; font-size: 0.9rem;
+    cursor: pointer; font-family: inherit;
+    transition: transform 120ms ease, background 120ms ease;
+  }
+  .like-btn:hover { background: #fdeee4; border-color: var(--color-accent); }
+  .like-btn:active { transform: scale(1.15); }
+  .like-btn.liked { background: #fdeee4; border-color: var(--color-accent); }
+  .comments { margin-top: 0.9rem; border-top: 1px dashed #d8cdb9; padding-top: 0.8rem;
+              display: grid; gap: 0.5rem; }
+  .comment { font-size: 0.9rem; line-height: 1.6; }
+  .comment .c-name { font-weight: bold; color: #7a6f5f; margin-right: 0.4rem; }
+  .comment .c-name::before { content: "🧑 "; }
+  .comment-form { display: flex; gap: 0.5rem; margin-top: 0.7rem; }
+  .comment-form input {
+    font-family: inherit; font-size: 0.9rem; border: 2px solid #d8cdb9;
+    border-radius: 10px; padding: 0.45rem 0.7rem; background: #fff; color: var(--color-ink);
+  }
+  .comment-form .c-input-name { width: 7.5rem; }
+  .comment-form .c-input-body { flex: 1; }
+  .comment-form button {
+    border: none; background: var(--color-accent); color: #2b2417;
+    font-weight: bold; border-radius: 10px; padding: 0.45rem 0.9rem;
+    cursor: pointer; font-family: inherit; font-size: 0.9rem;
+  }
+  .comment-form button:disabled { opacity: 0.5; }
 </style>
 </head>
 <body>
@@ -48,6 +76,90 @@
 <main id="feed"><p class="empty">読み込み中…</p></main>
 
 <script>
+const likedPosts = new Set(JSON.parse(localStorage.getItem("likedPosts") || "[]"));
+
+function renderComment(c) {
+  const div = document.createElement("div");
+  div.className = "comment";
+  const name = document.createElement("span");
+  name.className = "c-name";
+  name.textContent = c.name;
+  div.appendChild(name);
+  div.appendChild(document.createTextNode(c.body));
+  return div;
+}
+
+function renderPost(p) {
+  const el = document.createElement("article");
+  el.className = "post";
+  const date = new Date(p.created_at).toLocaleString("ja-JP");
+  el.innerHTML = `
+    <div class="meta"><span class="name"></span><time>${date}</time></div>
+    <p class="body"></p>
+    <div class="actions">
+      <button class="like-btn">❤️ いいね <span class="like-count"></span></button>
+    </div>
+    <div class="comments"></div>
+    <form class="comment-form">
+      <input class="c-input-name" placeholder="なまえ" maxlength="40">
+      <input class="c-input-body" placeholder="あたたかいコメントを送る" maxlength="500" required>
+      <button type="submit">送る</button>
+    </form>`;
+  el.querySelector(".name").textContent = p.display_name;
+  el.querySelector(".body").textContent = p.body;
+  el.querySelector(".like-count").textContent = p.likes || "";
+
+  // いいね(この端末から各投稿1回まで)
+  const likeBtn = el.querySelector(".like-btn");
+  if (likedPosts.has(p.id)) likeBtn.classList.add("liked");
+  likeBtn.addEventListener("click", async () => {
+    if (likedPosts.has(p.id)) return;
+    likedPosts.add(p.id);
+    localStorage.setItem("likedPosts", JSON.stringify([...likedPosts]));
+    likeBtn.classList.add("liked");
+    try {
+      const res = await fetch(`/api/posts/${p.id}/like`, { method: "POST" });
+      const data = await res.json();
+      el.querySelector(".like-count").textContent = data.likes;
+    } catch (e) { console.error(e); }
+  });
+
+  // コメント一覧と投稿フォーム
+  const commentsEl = el.querySelector(".comments");
+  const comments = p.comments || [];
+  if (comments.length === 0) commentsEl.style.display = "none";
+  comments.forEach((c) => commentsEl.appendChild(renderComment(c)));
+
+  const form = el.querySelector(".comment-form");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nameInput = form.querySelector(".c-input-name");
+    const bodyInput = form.querySelector(".c-input-body");
+    const body = bodyInput.value.trim();
+    if (!body) return;
+    const btn = form.querySelector("button");
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/posts/${p.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: nameInput.value.trim() || "名無しさん", body }),
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const comment = await res.json();
+      commentsEl.style.display = "";
+      commentsEl.appendChild(renderComment(comment));
+      bodyInput.value = "";
+    } catch (err) {
+      console.error(err);
+      alert("コメントを送れませんでした。もう一度お試しください。");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  return el;
+}
+
 async function load() {
   const feed = document.getElementById("feed");
   try {
@@ -59,24 +171,18 @@ async function load() {
       return;
     }
     feed.innerHTML = "";
-    for (const p of posts) {
-      const el = document.createElement("article");
-      el.className = "post";
-      const date = new Date(p.created_at).toLocaleString("ja-JP");
-      el.innerHTML = `
-        <div class="meta"><span class="name"></span><time>${date}</time></div>
-        <p class="body"></p>`;
-      el.querySelector(".name").textContent = p.display_name;
-      el.querySelector(".body").textContent = p.body;
-      feed.appendChild(el);
-    }
+    posts.forEach((p) => feed.appendChild(renderPost(p)));
   } catch (e) {
     feed.innerHTML = '<p class="empty">読み込みに失敗しました。</p>';
     console.error(e);
   }
 }
 load();
-setInterval(load, 10000); // 10秒ごとに更新
+// 入力中のコメントが消えないよう、自動更新はフォームに入力が無いときだけ
+setInterval(() => {
+  const typing = [...document.querySelectorAll(".comment-form input")].some((i) => i.value);
+  if (!typing) load();
+}, 15000);
 </script>
 </body>
 </html>

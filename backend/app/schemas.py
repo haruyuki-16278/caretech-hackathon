@@ -1,5 +1,5 @@
 """API リクエスト/レスポンスのスキーマ(docs/REQUIREMENTS.md §8 準拠)。"""
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -33,8 +33,21 @@ class ChatResponse(BaseModel):
     posted: bool = False
 
 
+class Comment(BaseModel):
+    name: str
+    body: str
+    created_at: str
+
+
 class Post(BaseModel):
-    id: int
+    id: str
     display_name: str
     body: str
     created_at: str
+    likes: int = 0
+    comments: List[Comment] = []
+
+
+class CommentRequest(BaseModel):
+    name: str = Field("名無しさん", min_length=1, max_length=40)
+    body: str = Field(..., min_length=1, max_length=500)
