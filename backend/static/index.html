@@ -67,6 +67,18 @@
   button:active { transform: scale(0.96); }
   button.mic.recording { background: #c0392b; animation: pulse 1s infinite; }
   @keyframes pulse { 50% { opacity: 0.6; } }
+  .starters {
+    display: flex; gap: 0.8rem; flex-wrap: wrap;
+    padding: 0 1.2rem 0.8rem; background: transparent;
+  }
+  .starters.hidden { display: none; }
+  .starter {
+    background: #fff; color: var(--color-ink);
+    border: 3px solid var(--color-accent); border-radius: 999px;
+    padding: 0.7rem 1.4rem; font-size: 0.95em;
+    box-shadow: 0 2px 6px rgba(58, 49, 41, 0.12);
+  }
+  .starter:hover { background: var(--color-consult); opacity: 1; }
 </style>
 </head>
 <body>
@@ -88,6 +100,11 @@
 <main id="log" aria-live="polite">
   <div class="msg ai">こんにちは。今日はどんなお話をしましょうか?最近あったこと、昔の思い出、困っていること、なんでもお聞かせください。</div>
 </main>
+
+<div class="starters" id="starters" aria-label="話題を選ぶ">
+  <button class="starter" data-text="昔の思い出話を聞いてほしいんじゃ">📖 思い出話をする</button>
+  <button class="starter" data-text="ちょっと困っていることがあってなあ">🍵 困っていることを相談</button>
+</div>
 
 <footer>
   <input id="input" type="text" placeholder="ここに話しかけてください" aria-label="メッセージ入力">
@@ -133,6 +150,7 @@ async function send() {
   const text = input.value.trim();
   if (!text || sending) return;  // 応答が返るまで連続送信しない
   setSending(true);
+  document.getElementById("starters").classList.add("hidden");
   input.value = "";  // 送信した内容は入力欄から消す
   addMsg(text, "me");
   try {
@@ -165,6 +183,15 @@ async function send() {
 
 const sendBtn = document.getElementById("send");
 sendBtn.addEventListener("click", send);
+
+// 最初に表示する話題ボタン。押すとその話題で会話を始め、以降は非表示にする
+const starters = document.getElementById("starters");
+starters.querySelectorAll(".starter").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    input.value = btn.dataset.text;
+    send();
+  });
+});
 input.addEventListener("keydown", (e) => {
   // 日本語入力の変換確定Enter(isComposing / keyCode 229)では送信しない。
   // 確定後にもう一度Enterを押したときだけ送信する。
