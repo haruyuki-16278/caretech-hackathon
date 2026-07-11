@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>みんなの広場</title>
+<style>
+  :root {
+    --color-bg: #1f2a24;
+    --color-card: #faf6ef;
+    --color-ink: #3a3129;
+    --color-accent: #e8a13c;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "BIZ UDGothic", sans-serif;
+    background: var(--color-bg); color: #f2ede3; min-height: 100vh;
+  }
+  header {
+    padding: 2.2rem 1.4rem 1.2rem; max-width: 640px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  header h1 { font-size: 1.7rem; letter-spacing: 0.12em; }
+  header h1 span { color: var(--color-accent); }
+  header a { color: #c9c0ae; font-size: 0.85rem; }
+  main { max-width: 640px; margin: 0 auto; padding: 0 1.4rem 3rem; display: grid; gap: 1.1rem; }
+  .post {
+    background: var(--color-card); color: var(--color-ink);
+    border-radius: var(--radius); padding: 1.2rem 1.4rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  }
+  .post .meta {
+    display: flex; justify-content: space-between; font-size: 0.8rem;
+    color: #8a7f70; margin-bottom: 0.5rem;
+  }
+  .post .name { font-weight: bold; color: var(--color-ink); }
+  .post .name::before { content: "👴 "; }
+  .post .body { line-height: 1.8; font-size: 1.05rem; }
+  .empty { text-align: center; color: #c9c0ae; padding: 3rem 0; line-height: 2; }
+</style>
+</head>
+<body>
+<header>
+  <h1>みんなの<span>広場</span></h1>
+  <a href="/">← おはなしの部屋</a>
+</header>
+<main id="feed"><p class="empty">読み込み中…</p></main>
+
+<script>
+async function load() {
+  const feed = document.getElementById("feed");
+  try {
+    const res = await fetch("/api/posts");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const posts = await res.json();
+    if (posts.length === 0) {
+      feed.innerHTML = '<p class="empty">まだ投稿がありません。<br>おじいちゃん・おばあちゃんのお話をお待ちしています。</p>';
+      return;
+    }
+    feed.innerHTML = "";
+    for (const p of posts) {
+      const el = document.createElement("article");
+      el.className = "post";
+      const date = new Date(p.created_at).toLocaleString("ja-JP");
+      el.innerHTML = `
+        <div class="meta"><span class="name"></span><time>${date}</time></div>
+        <p class="body"></p>`;
+      el.querySelector(".name").textContent = p.display_name;
+      el.querySelector(".body").textContent = p.body;
+      feed.appendChild(el);
+    }
+  } catch (e) {
+    feed.innerHTML = '<p class="empty">読み込みに失敗しました。</p>';
+    console.error(e);
+  }
+}
+load();
+setInterval(load, 10000); // 10秒ごとに更新
+</script>
+</body>
+</html>
