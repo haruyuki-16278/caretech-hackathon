@@ -127,6 +127,12 @@ h1 {
   color: var(--color-accent);
 }
 
+.consult-note {
+  margin-top: 8px;
+  font-size: 18px;
+  color: #5a4632;
+}
+
 .text-fallback {
   margin-top: 8px;
 }

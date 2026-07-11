@@ -110,3 +110,30 @@ def test_voice_chat_chat_category_has_no_consult_info(client):
     assert body["category"] == "chat"
     assert body["consult_info"] is None
     assert body["audio_base64"] is None
+
+
+def test_voice_chat_rejects_upload_exceeding_configured_max_size(monkeypatch, client):
+    """アップロードサイズが上限を超える場合は 413 を返し、STT/LLM 呼び出しを行わないこと。"""
+    monkeypatch.setenv("VOICE_MAX_UPLOAD_BYTES", "10")
+    _override(stt=FakeSTT("最近腰が痛くて困っています"), tts=FakeTTS(None, available=False))
+
+    response = client.post(
+        "/api/voice-chat",
+        data={"session_id": "s-too-large"},
+        files={"audio": ("recording.webm", b"x" * 100, "audio/webm")},
+    )
+
+    assert response.status_code == 413
+
+
+def test_voice_chat_accepts_upload_within_configured_max_size(monkeypatch, client):
+    monkeypatch.setenv("VOICE_MAX_UPLOAD_BYTES", "1000000")
+    _override(stt=FakeSTT("今日はいい天気ですね"), tts=FakeTTS(None, available=False))
+
+    response = client.post(
+        "/api/voice-chat",
+        data={"session_id": "s-ok"},
+        files={"audio": ("recording.webm", b"dummy-audio-bytes", "audio/webm")},
+    )
+
+    assert response.status_code == 200

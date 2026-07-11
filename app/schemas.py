@@ -16,6 +16,13 @@ class ConsultInfo(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     fax: Optional[str] = None
+    note: Optional[str] = Field(
+        default=None,
+        description=(
+            "同一市町村内に複数の窓口が存在し、地区が特定できない場合の補足メッセージ。"
+            "該当窓口を1件だけ機械的に選ぶのではなく、利用者に地区を確認するよう促す。"
+        ),
+    )
 
 
 class ChatRequest(BaseModel):
@@ -34,6 +41,14 @@ class ChatResponse(BaseModel):
     consult_info: Optional[ConsultInfo] = None
     post_proposal: Optional[str] = None
     transcript: Optional[str] = None
+    awaiting_confirmation: bool = Field(
+        default=False,
+        description="投稿(story)の可否をユーザーに確認中で、次発話が「はい/いいえ」等の返答として扱われるかどうか。",
+    )
+    posted: bool = Field(
+        default=False,
+        description="この応答内で、投稿(story)がユーザーの同意により確定したかどうか。",
+    )
 
 
 class VoiceChatResponse(BaseModel):
@@ -50,3 +65,11 @@ class VoiceChatResponse(BaseModel):
     audio_content_type: Optional[str] = None
     tts_available: bool = False
     stt_available: bool = False
+    awaiting_confirmation: bool = Field(
+        default=False,
+        description="投稿(story)の可否をユーザーに確認中で、次発話が「はい/いいえ」等の返答として扱われるかどうか。",
+    )
+    posted: bool = Field(
+        default=False,
+        description="この応答内で、投稿(story)がユーザーの同意により確定したかどうか。",
+    )

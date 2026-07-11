@@ -11,10 +11,12 @@ router = APIRouter(prefix="/api", tags=["chat"])
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
-    result = await process_utterance(request.text, request.area)
+    result = await process_utterance(request.text, request.area, request.session_id)
     return ChatResponse(
         reply=result.reply,
         category=result.category,
         consult_info=result.consult_info,
         post_proposal=result.post_proposal,
+        awaiting_confirmation=result.awaiting_confirmation,
+        posted=result.posted,
     )

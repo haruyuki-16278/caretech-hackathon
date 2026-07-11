@@ -14,6 +14,13 @@ def test_index_page_served():
     assert "話しかける" in response.text
 
 
+def test_index_page_includes_consult_note_element():
+    """相談窓口が複数該当し地区を特定できない場合の補足メッセージ表示欄が存在すること。"""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'id="consult-note"' in response.text
+
+
 def test_healthz():
     response = client.get("/healthz")
     assert response.status_code == 200

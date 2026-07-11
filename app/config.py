@@ -44,6 +44,20 @@ class Settings:
     azure_openai: AzureOpenAISettings
     azure_speech: AzureSpeechSettings
     consultation_offices_path: Path
+    voice_max_upload_bytes: int
+
+
+_DEFAULT_VOICE_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10MB(数分程度の圧縮音声を想定)
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
 
 
 def get_settings() -> Settings:
@@ -67,10 +81,15 @@ def get_settings() -> Settings:
     else:
         offices_path = _default_offices_path()
 
+    voice_max_upload_bytes = _env_int(
+        "VOICE_MAX_UPLOAD_BYTES", _DEFAULT_VOICE_MAX_UPLOAD_BYTES
+    )
+
     return Settings(
         azure_openai=azure_openai,
         azure_speech=azure_speech,
         consultation_offices_path=offices_path,
+        voice_max_upload_bytes=voice_max_upload_bytes,
     )
 
 

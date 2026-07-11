@@ -16,6 +16,7 @@
   const consultOfficeEl = document.getElementById("consult-office");
   const consultPhoneEl = document.getElementById("consult-phone");
   const consultAddressEl = document.getElementById("consult-address");
+  const consultNoteEl = document.getElementById("consult-note");
   const audioPlayer = document.getElementById("reply-audio");
   const areaInput = document.getElementById("area-input");
   const textForm = document.getElementById("text-fallback-form");
@@ -159,6 +160,13 @@
       consultOfficeEl.textContent = data.consult_info.office || "";
       consultPhoneEl.textContent = data.consult_info.phone || "電話番号は窓口にご確認ください";
       consultAddressEl.textContent = data.consult_info.address || "";
+      if (data.consult_info.note) {
+        consultNoteEl.textContent = data.consult_info.note;
+        consultNoteEl.hidden = false;
+      } else {
+        consultNoteEl.textContent = "";
+        consultNoteEl.hidden = true;
+      }
     } else {
       consultBlock.hidden = true;
     }
