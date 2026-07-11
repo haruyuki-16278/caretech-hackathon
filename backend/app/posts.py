@@ -54,16 +54,24 @@ class SQLiteStore:
 
 
 class FirestoreStore:
-    """チーム共有用の投稿ストア(Firestore)。"""
+    """チーム共有用の投稿ストア(Firestore)。
+
+    credentials_path 指定時はサービスアカウントキーで認証し、
+    未指定時は Application Default Credentials(Cloud Run 等)を使う。
+    """
 
     COLLECTION = "posts"
 
-    def __init__(self, credentials_path: str):
+    def __init__(self, credentials_path: str = "", project: str = ""):
         from google.cloud import firestore
-        from google.oauth2 import service_account
 
-        creds = service_account.Credentials.from_service_account_file(credentials_path)
-        self._db = firestore.Client(credentials=creds, project=creds.project_id)
+        if credentials_path:
+            from google.oauth2 import service_account
+
+            creds = service_account.Credentials.from_service_account_file(credentials_path)
+            self._db = firestore.Client(credentials=creds, project=creds.project_id)
+        else:
+            self._db = firestore.Client(project=project or None)
 
     def create(self, display_name: str, body: str) -> Post:
         created_at = _now()
@@ -94,7 +102,9 @@ class FirestoreStore:
 
 def build_store():
     if config.FIREBASE_CREDENTIALS_PATH:
-        return FirestoreStore(config.FIREBASE_CREDENTIALS_PATH)
+        return FirestoreStore(credentials_path=config.FIREBASE_CREDENTIALS_PATH)
+    if config.FIRESTORE_PROJECT:
+        return FirestoreStore(project=config.FIRESTORE_PROJECT)
     return SQLiteStore(config.POSTS_DB)
 
 

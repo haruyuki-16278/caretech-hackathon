@@ -21,6 +21,8 @@ AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
 
 # Firestore(未設定の場合はローカルSQLiteで動作する)
 FIREBASE_CREDENTIALS_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH", "")
+# Cloud Run 等、ADC で Firestore を使う場合のプロジェクトID
+FIRESTORE_PROJECT = os.getenv("FIRESTORE_PROJECT", "")
 
 
 def azure_configured() -> bool:

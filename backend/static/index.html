@@ -121,10 +121,19 @@ function addConsultCard(info) {
   log.scrollTop = log.scrollHeight;
 }
 
+let sending = false;
+
+function setSending(state) {
+  sending = state;
+  sendBtn.disabled = state;
+  sendBtn.textContent = state ? "…" : "話す";
+}
+
 async function send() {
   const text = input.value.trim();
-  if (!text) return;
-  input.value = "";
+  if (!text || sending) return;  // 応答が返るまで連続送信しない
+  setSending(true);
+  input.value = "";  // 送信した内容は入力欄から消す
   addMsg(text, "me");
   try {
     const res = await fetch("/api/chat", {
@@ -148,11 +157,19 @@ async function send() {
   } catch (e) {
     addMsg("すみません、うまくつながりませんでした。もう一度お試しください。", "ai");
     console.error(e);
+  } finally {
+    setSending(false);
+    input.focus();
   }
 }
 
-document.getElementById("send").addEventListener("click", send);
-input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+const sendBtn = document.getElementById("send");
+sendBtn.addEventListener("click", send);
+input.addEventListener("keydown", (e) => {
+  // 日本語入力の変換確定Enter(isComposing / keyCode 229)では送信しない。
+  // 確定後にもう一度Enterを押したときだけ送信する。
+  if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) send();
+});
 
 // 音声入力(Web Speech API)。文字起こし担当(A)の実装が入るまでの暫定
 const mic = document.getElementById("mic");

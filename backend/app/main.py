@@ -11,6 +11,15 @@ from .schemas import ChatRequest, ChatResponse, Post
 app = FastAPI(title="caretech-hackathon API")
 llm = build_llm()
 
+
+@app.middleware("http")
+async def no_cache_static(request, call_next):
+    """更新した画面が古いキャッシュで出続けないよう、常に再検証させる。"""
+    response = await call_next(request)
+    if not request.url.path.startswith("/api"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 # セッション状態(ハッカソン規模のためインメモリ)
 _histories: Dict[str, List[Dict]] = {}
 _pending_posts: Dict[str, Dict] = {}  # session_id -> {"body": str, "display_name": str}
