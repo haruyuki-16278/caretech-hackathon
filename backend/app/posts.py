@@ -1,21 +1,25 @@
 """投稿ストア(F7): Firestore(共有) または SQLite(ローカル)。
 
-FIREBASE_CREDENTIALS_PATH が設定されていれば Firestore を使い、
-未設定ならローカル SQLite にフォールバックする。
+FIREBASE_CREDENTIALS_PATH が設定されていれば Firestore、
+FIRESTORE_PROJECT があれば ADC の Firestore、
+どちらも無ければローカル SQLite にフォールバックする。
 """
+import json
 import sqlite3
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
 from . import config
-from .schemas import Post
+from .schemas import Comment, Post
 
 _SQLITE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     display_name TEXT NOT NULL,
     body TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    likes INTEGER NOT NULL DEFAULT 0,
+    comments TEXT NOT NULL DEFAULT '[]'
 );
 """
 
@@ -33,7 +37,27 @@ class SQLiteStore:
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self._db_path)
         conn.execute(_SQLITE_SCHEMA)
+        # 旧スキーマからの簡易マイグレーション
+        for ddl in (
+            "ALTER TABLE posts ADD COLUMN likes INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE posts ADD COLUMN comments TEXT NOT NULL DEFAULT '[]'",
+        ):
+            try:
+                conn.execute(ddl)
+            except sqlite3.OperationalError:
+                pass  # 既に列がある
         return conn
+
+    @staticmethod
+    def _to_post(row) -> Post:
+        return Post(
+            id=str(row[0]),
+            display_name=row[1],
+            body=row[2],
+            created_at=row[3],
+            likes=row[4],
+            comments=[Comment(**c) for c in json.loads(row[5])],
+        )
 
     def create(self, display_name: str, body: str) -> Post:
         created_at = _now()
@@ -42,15 +66,33 @@ class SQLiteStore:
                 "INSERT INTO posts (display_name, body, created_at) VALUES (?, ?, ?)",
                 (display_name, body, created_at),
             )
-            return Post(id=cur.lastrowid, display_name=display_name, body=body, created_at=created_at)
+            return Post(id=str(cur.lastrowid), display_name=display_name, body=body, created_at=created_at)
 
     def list(self, limit: int = 50) -> List[Post]:
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT id, display_name, body, created_at FROM posts ORDER BY id DESC LIMIT ?",
+                "SELECT id, display_name, body, created_at, likes, comments"
+                " FROM posts ORDER BY id DESC LIMIT ?",
                 (limit,),
             ).fetchall()
-        return [Post(id=r[0], display_name=r[1], body=r[2], created_at=r[3]) for r in rows]
+        return [self._to_post(r) for r in rows]
+
+    def like(self, post_id: str) -> Optional[int]:
+        with self._connect() as conn:
+            cur = conn.execute("UPDATE posts SET likes = likes + 1 WHERE id = ?", (post_id,))
+            if cur.rowcount == 0:
+                return None
+            return conn.execute("SELECT likes FROM posts WHERE id = ?", (post_id,)).fetchone()[0]
+
+    def add_comment(self, post_id: str, name: str, body: str) -> Optional[Comment]:
+        comment = Comment(name=name, body=body, created_at=_now())
+        with self._connect() as conn:
+            row = conn.execute("SELECT comments FROM posts WHERE id = ?", (post_id,)).fetchone()
+            if row is None:
+                return None
+            comments = json.loads(row[0]) + [comment.model_dump()]
+            conn.execute("UPDATE posts SET comments = ? WHERE id = ?", (json.dumps(comments), post_id))
+        return comment
 
 
 class FirestoreStore:
@@ -65,6 +107,7 @@ class FirestoreStore:
     def __init__(self, credentials_path: str = "", project: str = ""):
         from google.cloud import firestore
 
+        self._firestore = firestore
         if credentials_path:
             from google.oauth2 import service_account
 
@@ -73,14 +116,31 @@ class FirestoreStore:
         else:
             self._db = firestore.Client(project=project or None)
 
+    @staticmethod
+    def _to_post(doc_id: str, d: dict) -> Post:
+        return Post(
+            id=doc_id,
+            display_name=d.get("display_name") or "名無しさん",
+            body=d.get("body") or "",
+            created_at=d.get("created_at") or "",
+            likes=d.get("likes") or 0,
+            comments=[Comment(**c) for c in (d.get("comments") or [])],
+        )
+
     def create(self, display_name: str, body: str) -> Post:
         created_at = _now()
-        # 時系列ソート用に seq(エポックミリ秒)を持たせる
-        seq = int(datetime.now(timezone.utc).timestamp() * 1000)
-        self._db.collection(self.COLLECTION).add(
-            {"display_name": display_name, "body": body, "created_at": created_at, "seq": seq}
+        seq = int(datetime.now(timezone.utc).timestamp() * 1000)  # 時系列ソート用
+        _, ref = self._db.collection(self.COLLECTION).add(
+            {
+                "display_name": display_name,
+                "body": body,
+                "created_at": created_at,
+                "seq": seq,
+                "likes": 0,
+                "comments": [],
+            }
         )
-        return Post(id=seq, display_name=display_name, body=body, created_at=created_at)
+        return Post(id=ref.id, display_name=display_name, body=body, created_at=created_at)
 
     def list(self, limit: int = 50) -> List[Post]:
         docs = (
@@ -89,15 +149,23 @@ class FirestoreStore:
             .limit(limit)
             .stream()
         )
-        return [
-            Post(
-                id=d.get("seq") or 0,
-                display_name=d.get("display_name") or "名無しさん",
-                body=d.get("body") or "",
-                created_at=d.get("created_at") or "",
-            )
-            for d in (doc.to_dict() for doc in docs)
-        ]
+        return [self._to_post(doc.id, doc.to_dict()) for doc in docs]
+
+    def like(self, post_id: str) -> Optional[int]:
+        ref = self._db.collection(self.COLLECTION).document(post_id)
+        snapshot = ref.get()
+        if not snapshot.exists:
+            return None
+        ref.update({"likes": self._firestore.Increment(1)})
+        return (snapshot.get("likes") or 0) + 1
+
+    def add_comment(self, post_id: str, name: str, body: str) -> Optional[Comment]:
+        ref = self._db.collection(self.COLLECTION).document(post_id)
+        if not ref.get().exists:
+            return None
+        comment = Comment(name=name, body=body, created_at=_now())
+        ref.update({"comments": self._firestore.ArrayUnion([comment.model_dump()])})
+        return comment
 
 
 def build_store():
@@ -117,3 +185,11 @@ def create_post(display_name: str, body: str) -> Post:
 
 def list_posts(limit: int = 50) -> List[Post]:
     return _store.list(limit)
+
+
+def like_post(post_id: str) -> Optional[int]:
+    return _store.like(post_id)
+
+
+def add_comment(post_id: str, name: str, body: str) -> Optional[Comment]:
+    return _store.add_comment(post_id, name, body)

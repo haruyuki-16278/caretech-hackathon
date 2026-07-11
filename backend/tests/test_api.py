@@ -72,6 +72,47 @@ def test_story_then_refusal_does_not_post(client):
     assert client.get("/api/posts").json() == []
 
 
+def _create_post_via_story(client):
+    _chat(client, "昔の祭りの思い出でなあ")
+    _chat(client, "いいよ、投稿して")
+    return client.get("/api/posts").json()[0]
+
+
+def test_like_increments_count(client):
+    post = _create_post_via_story(client)
+
+    res1 = client.post(f"/api/posts/{post['id']}/like")
+    res2 = client.post(f"/api/posts/{post['id']}/like")
+
+    assert res1.status_code == 200 and res1.json()["likes"] == 1
+    assert res2.json()["likes"] == 2
+    assert client.get("/api/posts").json()[0]["likes"] == 2
+
+
+def test_like_unknown_post_returns_404(client):
+    assert client.post("/api/posts/9999/like").status_code == 404
+
+
+def test_comment_is_added_to_post(client):
+    post = _create_post_via_story(client)
+
+    res = client.post(
+        f"/api/posts/{post['id']}/comments",
+        json={"name": "わかもの", "body": "すてきなお話ですね!"},
+    )
+
+    assert res.status_code == 200
+    feed = client.get("/api/posts").json()
+    assert feed[0]["comments"] == [res.json()]
+    assert feed[0]["comments"][0]["name"] == "わかもの"
+
+
+def test_comment_rejects_empty_body(client):
+    post = _create_post_via_story(client)
+    res = client.post(f"/api/posts/{post['id']}/comments", json={"name": "わかもの", "body": ""})
+    assert res.status_code == 422
+
+
 def test_validation_rejects_empty_text(client):
     res = client.post(
         "/api/chat",

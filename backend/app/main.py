@@ -1,15 +1,25 @@
 """高齢者対話・見守りSNS(仮称)API — docs/REQUIREMENTS.md §8 準拠。"""
 from typing import Dict, List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from . import config, consult, posts
 from .llm import build_llm, detect_consent
-from .schemas import ChatRequest, ChatResponse, Post
+from .schemas import ChatRequest, ChatResponse, Comment, CommentRequest, Post
 
 app = FastAPI(title="caretech-hackathon API")
 llm = build_llm()
+
+# 担当A(録音・文字起こし)が別オリジンのフロントからAPIを呼べるよう許可する。
+# ハッカソン用途のため全オリジンを許可(本番運用時は許可元を絞ること)。
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.middleware("http")
@@ -79,6 +89,22 @@ def chat(req: ChatRequest) -> ChatResponse:
 @app.get("/api/posts", response_model=List[Post])
 def get_posts() -> List[Post]:
     return posts.list_posts()
+
+
+@app.post("/api/posts/{post_id}/like")
+def like_post(post_id: str) -> Dict:
+    likes = posts.like_post(post_id)
+    if likes is None:
+        raise HTTPException(status_code=404, detail="post not found")
+    return {"likes": likes}
+
+
+@app.post("/api/posts/{post_id}/comments", response_model=Comment)
+def add_comment(post_id: str, req: CommentRequest) -> Comment:
+    comment = posts.add_comment(post_id, req.name, req.body)
+    if comment is None:
+        raise HTTPException(status_code=404, detail="post not found")
+    return comment
 
 
 # フロントエンド(F7, F8): backend/static を配信
